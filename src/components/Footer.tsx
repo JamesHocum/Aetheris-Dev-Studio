@@ -8,7 +8,7 @@ export const Footer = () => {
           {/* Logo */}
           <div className="flex items-center gap-3">
             <Sparkles className="w-6 h-6 text-primary" />
-            <span className="text-lg font-bold text-primary">Aetheris: Goddess</span>
+            <span className="text-lg font-bold text-primary">Aetheris</span>
           </div>
 
           {/* Links */}
