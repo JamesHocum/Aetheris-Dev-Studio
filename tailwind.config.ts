@@ -84,6 +84,13 @@ export default {
       animation: {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
+        "pulse-glow": "pulse-glow 3s ease-in-out infinite",
+        "flicker": "flicker 4s linear infinite",
+      },
+      backgroundImage: {
+        "gradient-cyber": "var(--gradient-cyber)",
+        "gradient-terminal": "var(--gradient-terminal)",
+        "gradient-glow": "var(--gradient-glow)",
       },
     },
   },
