@@ -46,8 +46,7 @@ export const Hero = () => {
               size="lg" 
               className="text-lg"
               onClick={() => {
-                const featuresSection = document.querySelector('section:nth-of-type(3)');
-                featuresSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                document.getElementById('features')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }}
             >
               <Zap className="w-5 h-5" />
@@ -58,8 +57,7 @@ export const Hero = () => {
               size="lg" 
               className="text-lg"
               onClick={() => {
-                const modelsSection = document.querySelector('section:nth-of-type(2)');
-                modelsSection?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                document.getElementById('models')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }}
             >
               <Code2 className="w-5 h-5" />

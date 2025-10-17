@@ -55,7 +55,7 @@ const models = [
 
 export const AIModels = () => {
   return (
-    <section className="py-20 px-4 relative">
+    <section id="models" className="py-20 px-4 relative">
       <div className="container mx-auto">
         <div className="text-center mb-16">
           <h2 className="text-4xl md:text-5xl font-bold mb-4">
