@@ -25,9 +25,8 @@ export const Hero = () => {
 
           {/* Main Title */}
           <div className="space-y-4">
-            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold">
-              <span className="text-glow-primary text-primary">Aetheris</span>
-              <span className="text-foreground">: Goddess</span>
+            <h1 className="text-5xl md:text-7xl lg:text-8xl font-bold text-glow-primary text-primary">
+              Aetheris
             </h1>
             <p className="text-xl md:text-2xl text-secondary text-glow-accent">
               AI Dev Builder Studio
