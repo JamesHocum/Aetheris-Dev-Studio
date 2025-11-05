@@ -1,7 +1,10 @@
 import { Button } from "@/components/ui/button";
-import { Zap, Sparkles, Code2, Cpu } from "lucide-react";
+import { Zap, Sparkles, Code2, Cpu, Download } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 export const Hero = () => {
+  const navigate = useNavigate();
+  
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Animated Background Glow */}
@@ -62,6 +65,15 @@ export const Hero = () => {
             >
               <Code2 className="w-5 h-5" />
               Explore Models
+            </Button>
+            <Button 
+              variant="outline" 
+              size="lg" 
+              className="text-lg border-primary/30 hover:bg-primary/10"
+              onClick={() => navigate('/install')}
+            >
+              <Download className="w-5 h-5" />
+              Install App
             </Button>
           </div>
 
