@@ -48,23 +48,21 @@ export const Hero = () => {
               variant="cyber" 
               size="lg" 
               className="text-lg"
-              onClick={() => {
-                document.getElementById('features')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
-              }}
+              onClick={() => navigate('/studio')}
             >
               <Zap className="w-5 h-5" />
-              Start Building
+              Agent Builder
             </Button>
             <Button 
               variant="neon" 
               size="lg" 
               className="text-lg"
               onClick={() => {
-                document.getElementById('models')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                document.getElementById('features')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
               }}
             >
               <Code2 className="w-5 h-5" />
-              Explore Models
+              Explore Features
             </Button>
             <Button 
               variant="outline" 
