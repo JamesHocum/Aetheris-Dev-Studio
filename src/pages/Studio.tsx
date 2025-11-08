@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Sparkles, Send, ArrowLeft, Save, FolderOpen, Trash2, Menu } from "lucide-react";
+import { Sparkles, Send, ArrowLeft, Save, FolderOpen, Trash2, Menu, Image as ImageIcon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -14,10 +14,17 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 
+interface Message {
+  role: 'user' | 'aetheris';
+  content: string;
+  imageUrl?: string;
+  isGeneratingImage?: boolean;
+}
+
 interface Project {
   id: string;
   name: string;
-  messages: Array<{ role: 'user' | 'aetheris'; content: string }>;
+  messages: Message[];
   createdAt: number;
   updatedAt: number;
 }
@@ -25,12 +32,13 @@ interface Project {
 const Studio = () => {
   const navigate = useNavigate();
   const [command, setCommand] = useState("");
-  const [messages, setMessages] = useState<Array<{ role: 'user' | 'aetheris'; content: string }>>([
+  const [messages, setMessages] = useState<Message[]>([
     { role: 'aetheris', content: 'Greetings, Developer. I am Aetheris, your AI Dev Builder. How may I assist you in crafting your vision today?' }
   ]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
 
   // Load projects from localStorage on mount
   useEffect(() => {
@@ -180,12 +188,91 @@ const Studio = () => {
     });
   };
 
-  const handleUpdateProject = (projectId: string, newMessages: Array<{ role: 'user' | 'aetheris'; content: string }>) => {
+  const handleUpdateProject = (projectId: string, newMessages: Message[]) => {
     setProjects(prev => prev.map(p => 
       p.id === projectId 
         ? { ...p, messages: newMessages, updatedAt: Date.now() }
         : p
     ));
+  };
+
+  const handleGenerateImage = async () => {
+    if (!command.trim()) return;
+
+    const prompt = command;
+    const userMessage: Message = { role: 'user', content: `Generate image: ${prompt}` };
+    const newMessages = [...messages, userMessage];
+    
+    setMessages(newMessages);
+    setCommand("");
+    setIsGeneratingImage(true);
+
+    // Add placeholder for image generation
+    const imagePlaceholder: Message = { 
+      role: 'aetheris', 
+      content: 'Generating your image...',
+      isGeneratingImage: true
+    };
+    setMessages([...newMessages, imagePlaceholder]);
+
+    try {
+      const IMAGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-image`;
+      
+      const resp = await fetch(IMAGE_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ prompt }),
+      });
+
+      if (!resp.ok) {
+        const error = await resp.json();
+        throw new Error(error.error || 'Failed to generate image');
+      }
+
+      const { imageUrl, message } = await resp.json();
+
+      const finalMessages = [
+        ...newMessages, 
+        { 
+          role: 'aetheris' as const, 
+          content: message,
+          imageUrl,
+          isGeneratingImage: false
+        }
+      ];
+      setMessages(finalMessages);
+
+      if (currentProjectId) {
+        handleUpdateProject(currentProjectId, finalMessages);
+      }
+
+      toast({
+        title: "Image generated",
+        description: "Your image has been created successfully.",
+      });
+
+    } catch (error) {
+      console.error('Error generating image:', error);
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { 
+          role: 'aetheris', 
+          content: 'I apologize, but I encountered an error generating the image. Please try again.',
+          isGeneratingImage: false
+        };
+        return updated;
+      });
+      toast({
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to generate image",
+        variant: "destructive",
+      });
+    } finally {
+      setIsGeneratingImage(false);
+    }
   };
 
   const handleDeleteProject = (projectId: string, e: React.MouseEvent) => {
@@ -331,13 +418,26 @@ const Studio = () => {
                   )}
                 </div>
                 <div className={`flex-1 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                  <p className={`inline-block px-4 py-3 rounded-lg ${
+                  <div className={`inline-block px-4 py-3 rounded-lg ${
                     msg.role === 'aetheris'
                       ? 'bg-primary/10 border border-primary/20 text-foreground'
                       : 'bg-accent/10 border border-accent/20 text-foreground'
                   }`}>
-                    {msg.content}
-                  </p>
+                    <p>{msg.content}</p>
+                    {msg.imageUrl && (
+                      <img 
+                        src={msg.imageUrl} 
+                        alt="Generated" 
+                        className="mt-3 rounded-lg max-w-full max-h-96 object-contain"
+                      />
+                    )}
+                    {msg.isGeneratingImage && (
+                      <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
+                        <Sparkles className="w-4 h-4 animate-pulse" />
+                        <span>Creating your image...</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
               </div>
             ))}
@@ -363,15 +463,26 @@ const Studio = () => {
               <p className="text-sm text-muted-foreground">
                 Press Enter to send, Shift+Enter for new line
               </p>
-              <Button 
-                variant="cyber" 
-                onClick={handleSend}
-                disabled={!command.trim()}
-                className="gap-2"
-              >
-                <Send className="w-4 h-4" />
-                Send Command
-              </Button>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  onClick={handleGenerateImage}
+                  disabled={!command.trim() || isGeneratingImage}
+                  className="gap-2"
+                >
+                  <ImageIcon className="w-4 h-4" />
+                  Generate Image
+                </Button>
+                <Button 
+                  variant="cyber" 
+                  onClick={handleSend}
+                  disabled={!command.trim()}
+                  className="gap-2"
+                >
+                  <Send className="w-4 h-4" />
+                  Send Command
+                </Button>
+              </div>
             </div>
           </div>
         </Card>
