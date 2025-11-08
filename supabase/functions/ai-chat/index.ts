@@ -11,14 +11,14 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, model = 'google/gemini-2.5-flash' } = await req.json();
+    const { messages, model = 'google/gemini-2.5-flash', username = 'Developer' } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     
     if (!LOVABLE_API_KEY) {
       throw new Error('LOVABLE_API_KEY is not configured');
     }
 
-    console.log('Calling Lovable AI Gateway with model:', model, 'messages:', messages.length);
+    console.log('Calling Lovable AI Gateway with model:', model, 'messages:', messages.length, 'username:', username);
 
     const response = await fetch('https://ai.gateway.lovable.dev/v1/chat/completions', {
       method: 'POST',
@@ -31,7 +31,7 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: 'You are Aetheris, an advanced AI Development Assistant. You help developers architect, build, and deploy applications. Provide clear, concise, and actionable guidance. Be professional yet approachable. Focus on practical solutions and best practices.' 
+            content: `You are Aetheris, an advanced AI Development Assistant. You are helping ${username}, a developer. Address them by their name naturally when appropriate. You help developers architect, build, and deploy applications. Provide clear, concise, and actionable guidance. Be professional yet approachable. Focus on practical solutions and best practices.` 
           },
           ...messages.map((msg: { role: string; content: string }) => ({
             role: msg.role === 'aetheris' ? 'assistant' : msg.role,

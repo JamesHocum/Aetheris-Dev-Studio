@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Sparkles, Send, ArrowLeft, Save, FolderOpen, Trash2, Menu, Image as ImageIcon, ChevronDown } from "lucide-react";
+import { Sparkles, Send, ArrowLeft, Save, FolderOpen, Trash2, Menu, Image as ImageIcon, ChevronDown, User } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
 import {
@@ -11,6 +11,17 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { z } from "zod";
 import {
   Sheet,
   SheetContent,
@@ -35,6 +46,12 @@ interface Project {
   updatedAt: number;
 }
 
+const usernameSchema = z.string()
+  .trim()
+  .min(1, { message: "Name cannot be empty" })
+  .max(50, { message: "Name must be less than 50 characters" })
+  .regex(/^[a-zA-Z0-9\s_-]+$/, { message: "Name can only contain letters, numbers, spaces, hyphens and underscores" });
+
 const models = [
   { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Balanced - Fast & efficient' },
   { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Most powerful - Best reasoning' },
@@ -48,13 +65,28 @@ const Studio = () => {
   const navigate = useNavigate();
   const [command, setCommand] = useState("");
   const [selectedModel, setSelectedModel] = useState(models[0].id);
-  const [messages, setMessages] = useState<Message[]>([
-    { role: 'aetheris', content: 'Greetings, Developer. I am Aetheris, your AI Dev Builder. How may I assist you in crafting your vision today?' }
-  ]);
+  const [username, setUsername] = useState<string>("");
+  const [usernameInput, setUsernameInput] = useState("");
+  const [showUsernameDialog, setShowUsernameDialog] = useState(false);
+  const [usernameError, setUsernameError] = useState<string>("");
+  const [messages, setMessages] = useState<Message[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+
+  // Load username from localStorage on mount
+  useEffect(() => {
+    const savedUsername = localStorage.getItem('aetheris-username');
+    if (savedUsername) {
+      setUsername(savedUsername);
+      setMessages([
+        { role: 'aetheris', content: `Welcome back, ${savedUsername}! I am Aetheris, your AI Dev Builder. Ready to continue architecting excellence?` }
+      ]);
+    } else {
+      setShowUsernameDialog(true);
+    }
+  }, []);
 
   // Load projects from localStorage on mount
   useEffect(() => {
@@ -70,6 +102,32 @@ const Studio = () => {
       localStorage.setItem('aetheris-projects', JSON.stringify(projects));
     }
   }, [projects]);
+
+  const handleSaveUsername = () => {
+    try {
+      const validatedUsername = usernameSchema.parse(usernameInput);
+      setUsername(validatedUsername);
+      localStorage.setItem('aetheris-username', validatedUsername);
+      setShowUsernameDialog(false);
+      setUsernameError("");
+      setMessages([
+        { role: 'aetheris', content: `Greetings, ${validatedUsername}! I am Aetheris, your AI Dev Builder. Together, we shall architect the future. What vision shall we bring to life today?` }
+      ]);
+      toast({
+        title: "Welcome!",
+        description: `Nice to meet you, ${validatedUsername}!`,
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        setUsernameError(error.issues[0].message);
+      }
+    }
+  };
+
+  const handleChangeUsername = () => {
+    setUsernameInput(username);
+    setShowUsernameDialog(true);
+  };
 
   const handleSend = async () => {
     if (!command.trim()) return;
@@ -93,7 +151,7 @@ const Studio = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: newMessages, model: selectedModel }),
+        body: JSON.stringify({ messages: newMessages, model: selectedModel, username }),
       });
 
       if (!resp.ok || !resp.body) {
@@ -311,7 +369,10 @@ const Studio = () => {
   const handleNewProject = () => {
     setCurrentProjectId(null);
     setMessages([
-      { role: 'aetheris', content: 'Greetings, Developer. I am Aetheris, your AI Dev Builder. How may I assist you in crafting your vision today?' }
+      { role: 'aetheris', content: username 
+        ? `Ready for a new challenge, ${username}? Let's build something extraordinary together.` 
+        : 'Greetings, Developer. I am Aetheris, your AI Dev Builder. How may I assist you in crafting your vision today?' 
+      }
     ]);
     toast({
       title: "New project started",
@@ -321,6 +382,47 @@ const Studio = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      {/* Username Dialog */}
+      <Dialog open={showUsernameDialog} onOpenChange={setShowUsernameDialog}>
+        <DialogContent className="sm:max-w-md bg-card border-border">
+          <DialogHeader>
+            <DialogTitle className="text-primary text-glow-primary">Welcome to Aetheris Studio</DialogTitle>
+            <DialogDescription>
+              Please enter your name so I can address you properly during our collaboration.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="username" className="text-foreground">Your Name</Label>
+              <Input
+                id="username"
+                placeholder="Enter your name"
+                value={usernameInput}
+                onChange={(e) => {
+                  setUsernameInput(e.target.value);
+                  setUsernameError("");
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') {
+                    handleSaveUsername();
+                  }
+                }}
+                className="bg-background border-border text-foreground"
+                maxLength={50}
+              />
+              {usernameError && (
+                <p className="text-sm text-destructive">{usernameError}</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter>
+            <Button onClick={handleSaveUsername} variant="cyber" className="w-full">
+              Begin Building
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -383,6 +485,15 @@ const Studio = () => {
             >
               <Save className="w-4 h-4" />
               Save
+            </Button>
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={handleChangeUsername}
+              className="gap-2"
+            >
+              <User className="w-4 h-4" />
+              {username || "Set Name"}
             </Button>
             <Sheet open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
               <SheetTrigger asChild>
