@@ -47,20 +47,106 @@ const Studio = () => {
     }
   }, [projects]);
 
-  const handleSend = () => {
+  const handleSend = async () => {
     if (!command.trim()) return;
     
-    const newMessages = [...messages, 
-      { role: 'user' as const, content: command },
-      { role: 'aetheris' as const, content: 'I am processing your request. Full AI integration coming soon...' }
-    ];
+    const userMessage = { role: 'user' as const, content: command };
+    const newMessages = [...messages, userMessage];
     
     setMessages(newMessages);
     setCommand("");
 
-    // Auto-save to current project if one is loaded
-    if (currentProjectId) {
-      handleUpdateProject(currentProjectId, newMessages);
+    // Add placeholder for assistant response
+    const assistantPlaceholder = { role: 'aetheris' as const, content: '' };
+    setMessages([...newMessages, assistantPlaceholder]);
+
+    try {
+      const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
+      
+      const resp = await fetch(CHAT_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+        },
+        body: JSON.stringify({ messages: newMessages }),
+      });
+
+      if (!resp.ok || !resp.body) {
+        throw new Error('Failed to start stream');
+      }
+
+      const reader = resp.body.getReader();
+      const decoder = new TextDecoder();
+      let textBuffer = '';
+      let streamDone = false;
+      let assistantContent = '';
+
+      while (!streamDone) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        textBuffer += decoder.decode(value, { stream: true });
+
+        let newlineIndex: number;
+        while ((newlineIndex = textBuffer.indexOf('\n')) !== -1) {
+          let line = textBuffer.slice(0, newlineIndex);
+          textBuffer = textBuffer.slice(newlineIndex + 1);
+
+          if (line.endsWith('\r')) line = line.slice(0, -1);
+          if (line.startsWith(':') || line.trim() === '') continue;
+          if (!line.startsWith('data: ')) continue;
+
+          const jsonStr = line.slice(6).trim();
+          if (jsonStr === '[DONE]') {
+            streamDone = true;
+            break;
+          }
+
+          try {
+            const parsed = JSON.parse(jsonStr);
+            const content = parsed.choices?.[0]?.delta?.content as string | undefined;
+            if (content) {
+              assistantContent += content;
+              setMessages(prev => {
+                const updated = [...prev];
+                updated[updated.length - 1] = { 
+                  role: 'aetheris', 
+                  content: assistantContent 
+                };
+                return updated;
+              });
+            }
+          } catch {
+            textBuffer = line + '\n' + textBuffer;
+            break;
+          }
+        }
+      }
+
+      // Final update with complete message
+      const finalMessages = [...newMessages, { role: 'aetheris' as const, content: assistantContent }];
+      setMessages(finalMessages);
+
+      // Auto-save to current project if one is loaded
+      if (currentProjectId) {
+        handleUpdateProject(currentProjectId, finalMessages);
+      }
+
+    } catch (error) {
+      console.error('Error calling AI:', error);
+      setMessages(prev => {
+        const updated = [...prev];
+        updated[updated.length - 1] = { 
+          role: 'aetheris', 
+          content: 'I apologize, but I encountered an error processing your request. Please try again.' 
+        };
+        return updated;
+      });
+      toast({
+        title: "Error",
+        description: "Failed to connect to AI. Please try again.",
+        variant: "destructive",
+      });
     }
   };
 
