@@ -2,9 +2,15 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Sparkles, Send, ArrowLeft, Save, FolderOpen, Trash2, Menu, Image as ImageIcon } from "lucide-react";
+import { Sparkles, Send, ArrowLeft, Save, FolderOpen, Trash2, Menu, Image as ImageIcon, ChevronDown } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import {
   Sheet,
   SheetContent,
@@ -29,9 +35,19 @@ interface Project {
   updatedAt: number;
 }
 
+const models = [
+  { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Balanced - Fast & efficient' },
+  { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Most powerful - Best reasoning' },
+  { id: 'google/gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', description: 'Fastest - Simple tasks' },
+  { id: 'openai/gpt-5', name: 'GPT-5', description: 'Premium - Excellent reasoning' },
+  { id: 'openai/gpt-5-mini', name: 'GPT-5 Mini', description: 'Fast - Good performance' },
+  { id: 'openai/gpt-5-nano', name: 'GPT-5 Nano', description: 'Efficient - Cost saving' },
+];
+
 const Studio = () => {
   const navigate = useNavigate();
   const [command, setCommand] = useState("");
+  const [selectedModel, setSelectedModel] = useState(models[0].id);
   const [messages, setMessages] = useState<Message[]>([
     { role: 'aetheris', content: 'Greetings, Developer. I am Aetheris, your AI Dev Builder. How may I assist you in crafting your vision today?' }
   ]);
@@ -77,7 +93,7 @@ const Studio = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
         },
-        body: JSON.stringify({ messages: newMessages }),
+        body: JSON.stringify({ messages: newMessages, model: selectedModel }),
       });
 
       if (!resp.ok || !resp.body) {
@@ -316,9 +332,39 @@ const Studio = () => {
             <ArrowLeft className="w-4 h-4" />
             Back to Home
           </Button>
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-6 h-6 text-primary animate-flicker" />
-            <h1 className="text-2xl font-bold text-primary text-glow-primary">Aetheris Studio</h1>
+          <div className="flex items-center gap-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-6 h-6 text-primary animate-flicker" />
+              <h1 className="text-2xl font-bold text-primary text-glow-primary">Aetheris Studio</h1>
+            </div>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" className="gap-2">
+                  {models.find(m => m.id === selectedModel)?.name}
+                  <ChevronDown className="w-4 h-4" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-64 bg-card border-border z-50">
+                {models.map((model) => (
+                  <DropdownMenuItem
+                    key={model.id}
+                    onClick={() => {
+                      setSelectedModel(model.id);
+                      toast({
+                        title: "Model changed",
+                        description: `Now using ${model.name}`,
+                      });
+                    }}
+                    className={`cursor-pointer ${selectedModel === model.id ? 'bg-accent' : ''}`}
+                  >
+                    <div className="flex flex-col">
+                      <span className="font-medium text-foreground">{model.name}</span>
+                      <span className="text-xs text-muted-foreground">{model.description}</span>
+                    </div>
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
           <div className="flex items-center gap-2">
             <Button 
