@@ -2,9 +2,11 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Sparkles, Send, ArrowLeft, Save, FolderOpen, Trash2, Menu, Image as ImageIcon, ChevronDown, User } from "lucide-react";
+import { Sparkles, Send, ArrowLeft, Save, FolderOpen, Trash2, Menu, Image as ImageIcon, ChevronDown, User, Layout, Bot } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "@/hooks/use-toast";
+import { Canvas } from "@/components/Canvas";
+import { AgentManager } from "@/components/AgentManager";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -74,6 +76,9 @@ const Studio = () => {
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
   const [isHistoryOpen, setIsHistoryOpen] = useState(false);
   const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [viewMode, setViewMode] = useState<'chat' | 'canvas' | 'agents'>('chat');
+  const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [selectedAgentName, setSelectedAgentName] = useState<string>("");
 
   // Load username from localStorage on mount
   useEffect(() => {
@@ -380,6 +385,16 @@ const Studio = () => {
     });
   };
 
+  const handleAgentSelect = (agentId: string, agentName: string) => {
+    setSelectedAgentId(agentId);
+    setSelectedAgentName(agentName);
+    setViewMode('canvas');
+    toast({
+      title: "Agent workspace opened",
+      description: `Now working with ${agentName}`,
+    });
+  };
+
   return (
     <div className="min-h-screen bg-background">
       {/* Username Dialog */}
@@ -486,6 +501,35 @@ const Studio = () => {
               <Save className="w-4 h-4" />
               Save
             </Button>
+            <div className="flex gap-1 border border-border rounded-md p-1">
+              <Button
+                variant={viewMode === 'chat' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('chat')}
+                className="gap-2"
+              >
+                <Sparkles className="w-4 h-4" />
+                Chat
+              </Button>
+              <Button
+                variant={viewMode === 'canvas' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('canvas')}
+                className="gap-2"
+              >
+                <Layout className="w-4 h-4" />
+                Canvas
+              </Button>
+              <Button
+                variant={viewMode === 'agents' ? 'secondary' : 'ghost'}
+                size="sm"
+                onClick={() => setViewMode('agents')}
+                className="gap-2"
+              >
+                <Bot className="w-4 h-4" />
+                Agents
+              </Button>
+            </div>
             <Button 
               variant="outline" 
               size="sm"
@@ -555,8 +599,49 @@ const Studio = () => {
       </header>
 
       <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Chat Area */}
-        <Card className="bg-card/50 backdrop-blur-sm border-border p-6 mb-6 min-h-[60vh] max-h-[60vh] overflow-y-auto">
+        {/* Conditional Content Based on View Mode */}
+        {viewMode === 'agents' && (
+          <AgentManager 
+            username={username} 
+            onAgentSelect={handleAgentSelect}
+          />
+        )}
+
+        {viewMode === 'canvas' && (
+          <div className="space-y-4">
+            {selectedAgentName && (
+              <Card className="p-4 bg-card/50 backdrop-blur-sm border-border">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Bot className="w-5 h-5 text-primary" />
+                    <h2 className="text-lg font-semibold">
+                      Working with: {selectedAgentName}
+                    </h2>
+                  </div>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      setSelectedAgentId(null);
+                      setSelectedAgentName("");
+                      setViewMode('agents');
+                    }}
+                  >
+                    Switch Agent
+                  </Button>
+                </div>
+              </Card>
+            )}
+            <Card className="overflow-hidden" style={{ height: 'calc(100vh - 250px)' }}>
+              <Canvas agentId={selectedAgentId || undefined} />
+            </Card>
+          </div>
+        )}
+
+        {viewMode === 'chat' && (
+          <>
+            {/* Chat Area */}
+            <Card className="bg-card/50 backdrop-blur-sm border-border p-6 mb-6 min-h-[60vh] max-h-[60vh] overflow-y-auto">
           <div className="space-y-6">
             {messages.map((msg, idx) => (
               <div 
@@ -597,12 +682,12 @@ const Studio = () => {
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </Card>
+              ))}
+            </div>
+          </Card>
 
-        {/* Input Area */}
-        <Card className="bg-card/50 backdrop-blur-sm border-border p-6">
+          {/* Input Area */}
+          <Card className="bg-card/50 backdrop-blur-sm border-border p-6">
           <div className="space-y-4">
             <Textarea
               value={command}
@@ -640,12 +725,12 @@ const Studio = () => {
                   Send Command
                 </Button>
               </div>
+              </div>
             </div>
-          </div>
-        </Card>
+          </Card>
 
-        {/* Quick Actions */}
-        <div className="mt-6 flex flex-wrap gap-3 justify-center">
+          {/* Quick Actions */}
+          <div className="mt-6 flex flex-wrap gap-3 justify-center">
           <Button 
             variant="outline" 
             size="sm"
@@ -667,10 +752,12 @@ const Studio = () => {
             size="sm"
             onClick={() => setCommand("Create a dashboard with data tables")}
             className="border-accent/30 hover:bg-accent/10"
-          >
-            Dashboard
-          </Button>
-        </div>
+            >
+              Dashboard
+            </Button>
+          </div>
+        </>
+        )}
       </div>
     </div>
   );
