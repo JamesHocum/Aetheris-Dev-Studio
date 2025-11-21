@@ -23,6 +23,7 @@ export type Database = {
           file_size: number
           file_type: string
           id: string
+          owner_id: string | null
           uploaded_by: string
         }
         Insert: {
@@ -33,6 +34,7 @@ export type Database = {
           file_size: number
           file_type: string
           id?: string
+          owner_id?: string | null
           uploaded_by: string
         }
         Update: {
@@ -43,6 +45,7 @@ export type Database = {
           file_size?: number
           file_type?: string
           id?: string
+          owner_id?: string | null
           uploaded_by?: string
         }
         Relationships: [
@@ -62,6 +65,7 @@ export type Database = {
           created_at: string
           id: string
           memory_type: string
+          owner_id: string | null
         }
         Insert: {
           agent_id: string
@@ -69,6 +73,7 @@ export type Database = {
           created_at?: string
           id?: string
           memory_type: string
+          owner_id?: string | null
         }
         Update: {
           agent_id?: string
@@ -76,6 +81,7 @@ export type Database = {
           created_at?: string
           id?: string
           memory_type?: string
+          owner_id?: string | null
         }
         Relationships: [
           {
@@ -96,6 +102,7 @@ export type Database = {
           id: string
           is_public: boolean
           name: string
+          owner_id: string | null
           system_prompt: string | null
           updated_at: string
           voice_id: string | null
@@ -108,6 +115,7 @@ export type Database = {
           id?: string
           is_public?: boolean
           name: string
+          owner_id?: string | null
           system_prompt?: string | null
           updated_at?: string
           voice_id?: string | null
@@ -120,9 +128,28 @@ export type Database = {
           id?: string
           is_public?: boolean
           name?: string
+          owner_id?: string | null
           system_prompt?: string | null
           updated_at?: string
           voice_id?: string | null
+        }
+        Relationships: []
+      }
+      profiles: {
+        Row: {
+          created_at: string | null
+          display_name: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string | null
+          display_name?: string | null
+          id: string
+        }
+        Update: {
+          created_at?: string | null
+          display_name?: string | null
+          id?: string
         }
         Relationships: []
       }
@@ -133,6 +160,7 @@ export type Database = {
           id: string
           preferences: Json | null
           updated_at: string
+          user_id: string | null
           username: string
         }
         Insert: {
@@ -141,6 +169,7 @@ export type Database = {
           id?: string
           preferences?: Json | null
           updated_at?: string
+          user_id?: string | null
           username: string
         }
         Update: {
@@ -149,6 +178,7 @@ export type Database = {
           id?: string
           preferences?: Json | null
           updated_at?: string
+          user_id?: string | null
           username?: string
         }
         Relationships: []
@@ -158,7 +188,7 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
-      [_ in never]: never
+      is_agent_owner: { Args: { a_id: string }; Returns: boolean }
     }
     Enums: {
       [_ in never]: never

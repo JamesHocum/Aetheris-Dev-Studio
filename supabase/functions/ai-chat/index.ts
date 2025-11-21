@@ -1,4 +1,5 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.80.0';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,7 +12,21 @@ serve(async (req) => {
   }
 
   try {
-    const { messages, model = 'google/gemini-2.5-flash', username = 'Developer' } = await req.json();
+    const supabaseClient = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      { global: { headers: { Authorization: req.headers.get('Authorization')! } } }
+    );
+
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    if (!user) {
+      return new Response(JSON.stringify({ error: 'Unauthorized' }), {
+        status: 401,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const { messages, model = 'google/gemini-2.5-flash' } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     
     if (!LOVABLE_API_KEY) {
@@ -31,7 +46,7 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: `You are Aetheris, an advanced AI Development Assistant. You are helping ${username}, a developer. Address them by their name naturally when appropriate. You help developers architect, build, and deploy applications. Provide clear, concise, and actionable guidance. Be professional yet approachable. Focus on practical solutions and best practices.` 
+            content: 'You are Aetheris, an advanced AI Development Assistant with expertise in software architecture, code optimization, and cutting-edge technologies. You communicate with clarity and precision, helping developers build exceptional applications.'
           },
           ...messages.map((msg: { role: string; content: string }) => ({
             role: msg.role === 'aetheris' ? 'assistant' : msg.role,
