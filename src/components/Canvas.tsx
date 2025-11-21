@@ -14,10 +14,11 @@ interface CanvasNote {
 }
 
 interface CanvasProps {
-  agentId?: string;
+  agentId: string | null;
+  agentName: string;
 }
 
-export const Canvas = ({ agentId }: CanvasProps) => {
+export const Canvas = ({ agentId, agentName }: CanvasProps) => {
   const [notes, setNotes] = useState<CanvasNote[]>([]);
   const [selectedNote, setSelectedNote] = useState<string | null>(null);
   const [isDragging, setIsDragging] = useState<string | null>(null);

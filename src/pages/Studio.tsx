@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import type { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Sparkles, Send, ArrowLeft, Save, FolderOpen, Trash2, Menu, Image as ImageIcon, ChevronDown, User, Layout, Bot } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Sparkles, Send, ArrowLeft, Save, FolderOpen, Trash2, Menu, Image as ImageIcon, ChevronDown, User as UserIcon, Layout, Bot, LogOut } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Canvas } from "@/components/Canvas";
 import { AgentManager } from "@/components/AgentManager";
@@ -13,17 +15,6 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { z } from "zod";
 import {
   Sheet,
   SheetContent,
@@ -48,12 +39,6 @@ interface Project {
   updatedAt: number;
 }
 
-const usernameSchema = z.string()
-  .trim()
-  .min(1, { message: "Name cannot be empty" })
-  .max(50, { message: "Name must be less than 50 characters" })
-  .regex(/^[a-zA-Z0-9\s_-]+$/, { message: "Name can only contain letters, numbers, spaces, hyphens and underscores" });
-
 const models = [
   { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Balanced - Fast & efficient' },
   { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Most powerful - Best reasoning' },
@@ -65,12 +50,11 @@ const models = [
 
 const Studio = () => {
   const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
+  const [displayName, setDisplayName] = useState("");
+  const [loading, setLoading] = useState(true);
   const [command, setCommand] = useState("");
   const [selectedModel, setSelectedModel] = useState(models[0].id);
-  const [username, setUsername] = useState<string>("");
-  const [usernameInput, setUsernameInput] = useState("");
-  const [showUsernameDialog, setShowUsernameDialog] = useState(false);
-  const [usernameError, setUsernameError] = useState<string>("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
@@ -80,62 +64,72 @@ const Studio = () => {
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [selectedAgentName, setSelectedAgentName] = useState<string>("");
 
-  // Load username from localStorage on mount
+  // Set up auth listener and load user
   useEffect(() => {
-    const savedUsername = localStorage.getItem('aetheris-username');
-    if (savedUsername) {
-      setUsername(savedUsername);
-      setMessages([
-        { role: 'aetheris', content: `Welcome back, ${savedUsername}! I am Aetheris, your AI Dev Builder. Ready to continue architecting excellence?` }
-      ]);
-    } else {
-      setShowUsernameDialog(true);
-    }
-  }, []);
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        setUser(session?.user ?? null);
+        
+        if (session?.user) {
+          // Load profile
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("display_name")
+            .eq("id", session.user.id)
+            .maybeSingle();
+          
+          if (profile) {
+            setDisplayName(profile.display_name || "");
+            setMessages([
+              { role: 'aetheris', content: `Welcome back, ${profile.display_name}! I am Aetheris, your AI Dev Builder. Ready to continue architecting excellence?` }
+            ]);
+          }
+        } else {
+          // User logged out, redirect to auth
+          navigate("/auth");
+        }
+        
+        setLoading(false);
+      }
+    );
+
+    // Check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (!session) {
+        navigate("/auth");
+        setLoading(false);
+      } else {
+        setUser(session.user);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
 
   // Load projects from localStorage on mount
   useEffect(() => {
-    const savedProjects = localStorage.getItem('aetheris-projects');
-    if (savedProjects) {
-      setProjects(JSON.parse(savedProjects));
+    if (user) {
+      const savedProjects = localStorage.getItem(`aetheris-projects-${user.id}`);
+      if (savedProjects) {
+        setProjects(JSON.parse(savedProjects));
+      }
     }
-  }, []);
+  }, [user]);
 
   // Save projects to localStorage whenever they change
   useEffect(() => {
-    if (projects.length > 0) {
-      localStorage.setItem('aetheris-projects', JSON.stringify(projects));
+    if (user && projects.length > 0) {
+      localStorage.setItem(`aetheris-projects-${user.id}`, JSON.stringify(projects));
     }
-  }, [projects]);
+  }, [projects, user]);
 
-  const handleSaveUsername = () => {
-    try {
-      const validatedUsername = usernameSchema.parse(usernameInput);
-      setUsername(validatedUsername);
-      localStorage.setItem('aetheris-username', validatedUsername);
-      setShowUsernameDialog(false);
-      setUsernameError("");
-      setMessages([
-        { role: 'aetheris', content: `Greetings, ${validatedUsername}! I am Aetheris, your AI Dev Builder. Together, we shall architect the future. What vision shall we bring to life today?` }
-      ]);
-      toast({
-        title: "Welcome!",
-        description: `Nice to meet you, ${validatedUsername}!`,
-      });
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        setUsernameError(error.issues[0].message);
-      }
-    }
-  };
-
-  const handleChangeUsername = () => {
-    setUsernameInput(username);
-    setShowUsernameDialog(true);
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+    navigate("/auth");
   };
 
   const handleSend = async () => {
-    if (!command.trim()) return;
+    if (!command.trim() || !user) return;
     
     const userMessage = { role: 'user' as const, content: command };
     const newMessages = [...messages, userMessage];
@@ -148,15 +142,16 @@ const Studio = () => {
     setMessages([...newMessages, assistantPlaceholder]);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const CHAT_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/ai-chat`;
       
       const resp = await fetch(CHAT_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Authorization': `Bearer ${session?.access_token}`,
         },
-        body: JSON.stringify({ messages: newMessages, model: selectedModel, username }),
+        body: JSON.stringify({ messages: newMessages, model: selectedModel }),
       });
 
       if (!resp.ok || !resp.body) {
@@ -276,7 +271,7 @@ const Studio = () => {
   };
 
   const handleGenerateImage = async () => {
-    if (!command.trim()) return;
+    if (!command.trim() || !user) return;
 
     const prompt = command;
     const userMessage: Message = { role: 'user', content: `Generate image: ${prompt}` };
@@ -295,13 +290,14 @@ const Studio = () => {
     setMessages([...newMessages, imagePlaceholder]);
 
     try {
+      const { data: { session } } = await supabase.auth.getSession();
       const IMAGE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/generate-image`;
       
       const resp = await fetch(IMAGE_URL, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY}`,
+          'Authorization': `Bearer ${session?.access_token}`,
         },
         body: JSON.stringify({ prompt }),
       });
@@ -374,8 +370,8 @@ const Studio = () => {
   const handleNewProject = () => {
     setCurrentProjectId(null);
     setMessages([
-      { role: 'aetheris', content: username 
-        ? `Ready for a new challenge, ${username}? Let's build something extraordinary together.` 
+      { role: 'aetheris', content: displayName
+        ? `Ready for a new challenge, ${displayName}? Let's build something extraordinary together.` 
         : 'Greetings, Developer. I am Aetheris, your AI Dev Builder. How may I assist you in crafting your vision today?' 
       }
     ]);
@@ -395,49 +391,20 @@ const Studio = () => {
     });
   };
 
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      {/* Username Dialog */}
-      <Dialog open={showUsernameDialog} onOpenChange={setShowUsernameDialog}>
-        <DialogContent className="sm:max-w-md bg-card border-border">
-          <DialogHeader>
-            <DialogTitle className="text-primary text-glow-primary">Welcome to Aetheris Studio</DialogTitle>
-            <DialogDescription>
-              Please enter your name so I can address you properly during our collaboration.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label htmlFor="username" className="text-foreground">Your Name</Label>
-              <Input
-                id="username"
-                placeholder="Enter your name"
-                value={usernameInput}
-                onChange={(e) => {
-                  setUsernameInput(e.target.value);
-                  setUsernameError("");
-                }}
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter') {
-                    handleSaveUsername();
-                  }
-                }}
-                className="bg-background border-border text-foreground"
-                maxLength={50}
-              />
-              {usernameError && (
-                <p className="text-sm text-destructive">{usernameError}</p>
-              )}
-            </div>
-          </div>
-          <DialogFooter>
-            <Button onClick={handleSaveUsername} variant="cyber" className="w-full">
-              Begin Building
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Header */}
       <header className="border-b border-border bg-card/50 backdrop-blur-sm sticky top-0 z-50">
         <div className="container mx-auto px-4 py-4 flex items-center justify-between">
@@ -484,26 +451,25 @@ const Studio = () => {
             </DropdownMenu>
           </div>
           <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground">{displayName}</span>
             <Button 
-              variant="outline" 
+              variant="ghost" 
               size="sm"
-              onClick={handleNewProject}
+              onClick={handleSignOut}
               className="gap-2"
             >
-              New Project
+              <LogOut className="w-4 h-4" />
+              Sign Out
             </Button>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handleSaveProject}
-              className="gap-2"
-            >
-              <Save className="w-4 h-4" />
-              Save
-            </Button>
-            <div className="flex gap-1 border border-border rounded-md p-1">
+          </div>
+        </div>
+
+        {/* View Mode Tabs */}
+        <div className="border-t border-border">
+          <div className="container mx-auto px-4">
+            <div className="flex gap-2 py-2">
               <Button
-                variant={viewMode === 'chat' ? 'secondary' : 'ghost'}
+                variant={viewMode === 'chat' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('chat')}
                 className="gap-2"
@@ -512,16 +478,17 @@ const Studio = () => {
                 Chat
               </Button>
               <Button
-                variant={viewMode === 'canvas' ? 'secondary' : 'ghost'}
+                variant={viewMode === 'canvas' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('canvas')}
                 className="gap-2"
               >
                 <Layout className="w-4 h-4" />
                 Canvas
+                {selectedAgentName && <span className="text-xs opacity-70">({selectedAgentName})</span>}
               </Button>
               <Button
-                variant={viewMode === 'agents' ? 'secondary' : 'ghost'}
+                variant={viewMode === 'agents' ? 'default' : 'ghost'}
                 size="sm"
                 onClick={() => setViewMode('agents')}
                 className="gap-2"
@@ -530,235 +497,166 @@ const Studio = () => {
                 Agents
               </Button>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm"
-              onClick={handleChangeUsername}
-              className="gap-2"
-            >
-              <User className="w-4 h-4" />
-              {username || "Set Name"}
-            </Button>
-            <Sheet open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
-              <SheetTrigger asChild>
-                <Button variant="outline" size="sm" className="gap-2">
-                  <Menu className="w-4 h-4" />
-                  History
-                </Button>
-              </SheetTrigger>
-              <SheetContent>
-                <SheetHeader>
-                  <SheetTitle>Project History</SheetTitle>
-                  <SheetDescription>
-                    Load or delete your previous builds
-                  </SheetDescription>
-                </SheetHeader>
-                <div className="mt-6 space-y-3">
-                  {projects.length === 0 ? (
-                    <p className="text-sm text-muted-foreground text-center py-8">
-                      No saved projects yet
-                    </p>
-                  ) : (
-                    projects.map((project) => (
-                      <Card 
-                        key={project.id}
-                        className={`p-4 cursor-pointer hover:bg-accent/50 transition-colors ${
-                          currentProjectId === project.id ? 'border-primary' : ''
-                        }`}
-                        onClick={() => handleLoadProject(project)}
-                      >
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex-1 min-w-0">
-                            <h3 className="font-medium text-foreground truncate">
-                              {project.name}
-                            </h3>
-                            <p className="text-xs text-muted-foreground mt-1">
-                              {new Date(project.updatedAt).toLocaleDateString()} at {new Date(project.updatedAt).toLocaleTimeString()}
-                            </p>
-                            <p className="text-xs text-muted-foreground">
-                              {project.messages.length} messages
-                            </p>
-                          </div>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={(e) => handleDeleteProject(project.id, e)}
-                            className="shrink-0"
-                          >
-                            <Trash2 className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </div>
-                      </Card>
-                    ))
-                  )}
-                </div>
-              </SheetContent>
-            </Sheet>
           </div>
         </div>
       </header>
 
-      <div className="container mx-auto px-4 py-8 max-w-6xl">
-        {/* Conditional Content Based on View Mode */}
-        {viewMode === 'agents' && (
-          <AgentManager 
-            username={username} 
-            onAgentSelect={handleAgentSelect}
-          />
-        )}
-
-        {viewMode === 'canvas' && (
-          <div className="space-y-4">
-            {selectedAgentName && (
-              <Card className="p-4 bg-card/50 backdrop-blur-sm border-border">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Bot className="w-5 h-5 text-primary" />
-                    <h2 className="text-lg font-semibold">
-                      Working with: {selectedAgentName}
-                    </h2>
-                  </div>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => {
-                      setSelectedAgentId(null);
-                      setSelectedAgentName("");
-                      setViewMode('agents');
-                    }}
-                  >
-                    Switch Agent
-                  </Button>
-                </div>
-              </Card>
-            )}
-            <Card className="overflow-hidden" style={{ height: 'calc(100vh - 250px)' }}>
-              <Canvas agentId={selectedAgentId || undefined} />
-            </Card>
-          </div>
-        )}
-
-        {viewMode === 'chat' && (
-          <>
-            {/* Chat Area */}
-            <Card className="bg-card/50 backdrop-blur-sm border-border p-6 mb-6 min-h-[60vh] max-h-[60vh] overflow-y-auto">
-          <div className="space-y-6">
-            {messages.map((msg, idx) => (
-              <div 
-                key={idx} 
-                className={`flex gap-4 ${msg.role === 'user' ? 'flex-row-reverse' : 'flex-row'}`}
-              >
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                  msg.role === 'aetheris' 
-                    ? 'bg-primary/20 border border-primary/30' 
-                    : 'bg-accent/20 border border-accent/30'
-                }`}>
-                  {msg.role === 'aetheris' ? (
-                    <Sparkles className="w-5 h-5 text-primary" />
-                  ) : (
-                    <span className="text-accent font-bold">U</span>
+      {/* Main Content */}
+      {viewMode === 'agents' ? (
+        <div className="max-w-7xl mx-auto px-4 py-8">
+          <AgentManager userId={user.id} onAgentSelect={handleAgentSelect} />
+        </div>
+      ) : viewMode === 'canvas' ? (
+        <Canvas agentId={selectedAgentId} agentName={selectedAgentName} />
+      ) : (
+        <div className="flex h-[calc(100vh-180px)]">
+          <div className="flex-1 flex flex-col">
+            {/* Messages */}
+            <div className="flex-1 overflow-y-auto px-4 py-6 space-y-6">
+              {messages.map((msg, idx) => (
+                <div 
+                  key={idx} 
+                  className={`flex gap-4 ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}
+                >
+                  {msg.role === 'aetheris' && (
+                    <div className="w-10 h-10 rounded-full bg-primary/20 border border-primary flex items-center justify-center flex-shrink-0">
+                      <Sparkles className="w-5 h-5 text-primary" />
+                    </div>
                   )}
-                </div>
-                <div className={`flex-1 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
-                  <div className={`inline-block px-4 py-3 rounded-lg ${
-                    msg.role === 'aetheris'
-                      ? 'bg-primary/10 border border-primary/20 text-foreground'
-                      : 'bg-accent/10 border border-accent/20 text-foreground'
+                  <Card className={`max-w-[80%] p-4 ${
+                    msg.role === 'user' 
+                      ? 'bg-primary/10 border-primary/20' 
+                      : 'bg-card'
                   }`}>
-                    <p>{msg.content}</p>
+                    <p className="whitespace-pre-wrap text-foreground">{msg.content}</p>
                     {msg.imageUrl && (
                       <img 
                         src={msg.imageUrl} 
                         alt="Generated" 
-                        className="mt-3 rounded-lg max-w-full max-h-96 object-contain"
+                        className="mt-3 rounded-lg max-w-full"
                       />
                     )}
-                    {msg.isGeneratingImage && (
-                      <div className="mt-3 flex items-center gap-2 text-sm text-muted-foreground">
-                        <Sparkles className="w-4 h-4 animate-pulse" />
-                        <span>Creating your image...</span>
+                  </Card>
+                  {msg.role === 'user' && (
+                    <div className="w-10 h-10 rounded-full bg-accent/20 border border-accent flex items-center justify-center flex-shrink-0">
+                      <UserIcon className="w-5 h-5 text-accent" />
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            {/* Input Area */}
+            <div className="border-t border-border p-4 bg-card/50 backdrop-blur-sm">
+              <div className="container mx-auto max-w-4xl">
+                <div className="flex gap-2 mb-3">
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleNewProject}
+                    className="gap-2"
+                  >
+                    New Project
+                  </Button>
+                  <Button 
+                    variant="outline" 
+                    size="sm"
+                    onClick={handleSaveProject}
+                    disabled={messages.length === 0}
+                    className="gap-2"
+                  >
+                    <Save className="w-4 h-4" />
+                    Save
+                  </Button>
+                  <Sheet open={isHistoryOpen} onOpenChange={setIsHistoryOpen}>
+                    <SheetTrigger asChild>
+                      <Button variant="outline" size="sm" className="gap-2">
+                        <FolderOpen className="w-4 h-4" />
+                        History ({projects.length})
+                      </Button>
+                    </SheetTrigger>
+                    <SheetContent className="w-full sm:max-w-md bg-card border-border">
+                      <SheetHeader>
+                        <SheetTitle className="text-primary">Project History</SheetTitle>
+                        <SheetDescription>
+                          Load or delete your saved projects
+                        </SheetDescription>
+                      </SheetHeader>
+                      <div className="mt-6 space-y-2">
+                        {projects.length === 0 ? (
+                          <p className="text-sm text-muted-foreground text-center py-8">
+                            No saved projects yet
+                          </p>
+                        ) : (
+                          projects.map((project) => (
+                            <Card
+                              key={project.id}
+                              className={`p-3 cursor-pointer hover:bg-accent/50 transition-colors ${
+                                currentProjectId === project.id ? 'border-primary' : ''
+                              }`}
+                              onClick={() => handleLoadProject(project)}
+                            >
+                              <div className="flex items-start justify-between gap-2">
+                                <div className="flex-1">
+                                  <h4 className="font-medium text-foreground">{project.name}</h4>
+                                  <p className="text-xs text-muted-foreground">
+                                    {new Date(project.updatedAt).toLocaleDateString()}
+                                  </p>
+                                </div>
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={(e) => handleDeleteProject(project.id, e)}
+                                  className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </Button>
+                              </div>
+                            </Card>
+                          ))
+                        )}
                       </div>
-                    )}
+                    </SheetContent>
+                  </Sheet>
+                </div>
+                <div className="flex gap-2">
+                  <Textarea
+                    value={command}
+                    onChange={(e) => setCommand(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        handleSend();
+                      }
+                    }}
+                    placeholder="Describe what you want to build..."
+                    className="flex-1 min-h-[60px] resize-none bg-background border-border text-foreground"
+                  />
+                  <div className="flex flex-col gap-2">
+                    <Button
+                      onClick={handleSend}
+                      disabled={!command.trim()}
+                      className="px-4 h-full"
+                    >
+                      <Send className="w-4 h-4 mr-2" />
+                      Send
+                    </Button>
+                    <Button
+                      onClick={handleGenerateImage}
+                      disabled={!command.trim() || isGeneratingImage}
+                      variant="outline"
+                      className="px-4 h-full"
+                    >
+                      <ImageIcon className="w-4 h-4 mr-2" />
+                      Image
+                    </Button>
                   </div>
                 </div>
               </div>
-              ))}
             </div>
-          </Card>
-
-          {/* Input Area */}
-          <Card className="bg-card/50 backdrop-blur-sm border-border p-6">
-          <div className="space-y-4">
-            <Textarea
-              value={command}
-              onChange={(e) => setCommand(e.target.value)}
-              placeholder="Describe what you want to build... (e.g., 'Create a login page with email authentication')"
-              className="min-h-[120px] bg-background/50 border-border text-foreground resize-none"
-              onKeyDown={(e) => {
-                if (e.key === 'Enter' && !e.shiftKey) {
-                  e.preventDefault();
-                  handleSend();
-                }
-              }}
-            />
-            <div className="flex justify-between items-center">
-              <p className="text-sm text-muted-foreground">
-                Press Enter to send, Shift+Enter for new line
-              </p>
-              <div className="flex gap-2">
-                <Button 
-                  variant="outline" 
-                  onClick={handleGenerateImage}
-                  disabled={!command.trim() || isGeneratingImage}
-                  className="gap-2"
-                >
-                  <ImageIcon className="w-4 h-4" />
-                  Generate Image
-                </Button>
-                <Button 
-                  variant="cyber" 
-                  onClick={handleSend}
-                  disabled={!command.trim()}
-                  className="gap-2"
-                >
-                  <Send className="w-4 h-4" />
-                  Send Command
-                </Button>
-              </div>
-              </div>
-            </div>
-          </Card>
-
-          {/* Quick Actions */}
-          <div className="mt-6 flex flex-wrap gap-3 justify-center">
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setCommand("Create a landing page with hero section")}
-            className="border-primary/30 hover:bg-primary/10"
-          >
-            Landing Page
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setCommand("Add user authentication with login and signup")}
-            className="border-secondary/30 hover:bg-secondary/10"
-          >
-            Add Auth
-          </Button>
-          <Button 
-            variant="outline" 
-            size="sm"
-            onClick={() => setCommand("Create a dashboard with data tables")}
-            className="border-accent/30 hover:bg-accent/10"
-            >
-              Dashboard
-            </Button>
           </div>
-        </>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 };
