@@ -101,10 +101,16 @@ export type Database = {
           description: string | null
           id: string
           is_public: boolean
+          max_tokens: number | null
           name: string
           owner_id: string | null
+          published: boolean | null
+          slug: string
           system_prompt: string | null
+          tags: string[] | null
+          temperature: number | null
           updated_at: string
+          visibility: Database["public"]["Enums"]["agent_visibility"] | null
           voice_id: string | null
         }
         Insert: {
@@ -114,10 +120,16 @@ export type Database = {
           description?: string | null
           id?: string
           is_public?: boolean
+          max_tokens?: number | null
           name: string
           owner_id?: string | null
+          published?: boolean | null
+          slug: string
           system_prompt?: string | null
+          tags?: string[] | null
+          temperature?: number | null
           updated_at?: string
+          visibility?: Database["public"]["Enums"]["agent_visibility"] | null
           voice_id?: string | null
         }
         Update: {
@@ -127,10 +139,16 @@ export type Database = {
           description?: string | null
           id?: string
           is_public?: boolean
+          max_tokens?: number | null
           name?: string
           owner_id?: string | null
+          published?: boolean | null
+          slug?: string
           system_prompt?: string | null
+          tags?: string[] | null
+          temperature?: number | null
           updated_at?: string
+          visibility?: Database["public"]["Enums"]["agent_visibility"] | null
           voice_id?: string | null
         }
         Relationships: []
@@ -191,7 +209,7 @@ export type Database = {
       is_agent_owner: { Args: { a_id: string }; Returns: boolean }
     }
     Enums: {
-      [_ in never]: never
+      agent_visibility: "private" | "unlisted" | "public"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -318,6 +336,8 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      agent_visibility: ["private", "unlisted", "public"],
+    },
   },
 } as const
