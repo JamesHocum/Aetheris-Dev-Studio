@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -19,10 +20,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Bot, Plus, Edit, Trash2, Upload, FileText } from "lucide-react";
+import { Bot, Plus, Settings, Trash2, FileText } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
+import { slugify } from "@/lib/slugify";
+import type { AgentVisibility } from "@/types/agent";
 
 const models = [
   { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
@@ -39,7 +42,9 @@ const agentSchema = z.object({
   description: z.string().max(500, "Description must be less than 500 characters").optional(),
   system_prompt: z.string().max(8000, "System prompt must be less than 8000 characters").optional(),
   base_model: z.string().min(1, "Base model is required"),
-  is_public: z.boolean(),
+  visibility: z.enum(["private", "unlisted", "public"]),
+  temperature: z.number().min(0).max(2),
+  max_tokens: z.number().min(1),
 });
 
 interface Agent {
@@ -60,6 +65,7 @@ interface AgentManagerProps {
 }
 
 export const AgentManager = ({ userId, onAgentSelect }: AgentManagerProps) => {
+  const navigate = useNavigate();
   const [agents, setAgents] = useState<Agent[]>([]);
   const [showCreateDialog, setShowCreateDialog] = useState(false);
   const [newAgent, setNewAgent] = useState({
@@ -67,7 +73,9 @@ export const AgentManager = ({ userId, onAgentSelect }: AgentManagerProps) => {
     description: '',
     base_model: 'google/gemini-2.5-flash',
     system_prompt: '',
-    is_public: false,
+    visibility: 'private' as AgentVisibility,
+    temperature: 0.7,
+    max_tokens: 2048,
   });
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -131,16 +139,21 @@ export const AgentManager = ({ userId, onAgentSelect }: AgentManagerProps) => {
 
     setIsLoading(true);
 
+    const slug = slugify(newAgent.name) + '-' + crypto.randomUUID().slice(0, 8);
+
     const { data, error } = await supabase
       .from('agents')
       .insert({
         name: newAgent.name.trim(),
+        slug,
         description: newAgent.description.trim() || null,
         base_model: newAgent.base_model,
         system_prompt: newAgent.system_prompt.trim() || null,
+        visibility: newAgent.visibility,
+        temperature: newAgent.temperature,
+        max_tokens: newAgent.max_tokens,
         owner_id: userId,
         created_by: userId,
-        is_public: newAgent.is_public,
       })
       .select()
       .single();
@@ -197,7 +210,9 @@ export const AgentManager = ({ userId, onAgentSelect }: AgentManagerProps) => {
       description: '',
       base_model: 'google/gemini-2.5-flash',
       system_prompt: '',
-      is_public: false,
+      visibility: 'private',
+      temperature: 0.7,
+      max_tokens: 2048,
     });
     setSelectedFile(null);
     setShowCreateDialog(false);
@@ -287,6 +302,13 @@ export const AgentManager = ({ userId, onAgentSelect }: AgentManagerProps) => {
                   onClick={() => onAgentSelect(agent.id, agent.name)}
                 >
                   Open Workspace
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => navigate(`/agents/${agent.id}`)}
+                >
+                  <Settings className="w-4 h-4" />
                 </Button>
                 <Button
                   variant="ghost"
@@ -438,17 +460,56 @@ export const AgentManager = ({ userId, onAgentSelect }: AgentManagerProps) => {
               </p>
             </div>
 
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="is_public"
-                checked={newAgent.is_public}
-                onChange={(e) => setNewAgent({ ...newAgent, is_public: e.target.checked })}
-                className="rounded"
-              />
-              <Label htmlFor="is_public" className="cursor-pointer">
-                Make this agent public (visible to everyone)
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="visibility">Visibility</Label>
+                <Select
+                  value={newAgent.visibility}
+                  onValueChange={(value) => setNewAgent({ ...newAgent, visibility: value as AgentVisibility })}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="private">Private</SelectItem>
+                    <SelectItem value="unlisted">Unlisted</SelectItem>
+                    <SelectItem value="public">Public</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">
+                  Private: only you. Unlisted: share via link. Public: discoverable.
+                </p>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="max_tokens">Max Tokens</Label>
+                <Input
+                  id="max_tokens"
+                  type="number"
+                  value={newAgent.max_tokens}
+                  onChange={(e) => setNewAgent({ ...newAgent, max_tokens: parseInt(e.target.value) || 2048 })}
+                  min={1}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="temperature">
+                Temperature: {newAgent.temperature.toFixed(2)}
               </Label>
+              <input
+                id="temperature"
+                type="range"
+                min={0}
+                max={2}
+                step={0.05}
+                value={newAgent.temperature}
+                onChange={(e) => setNewAgent({ ...newAgent, temperature: parseFloat(e.target.value) })}
+                className="w-full"
+              />
+              <p className="text-xs text-muted-foreground">
+                Lower = more focused, higher = more creative
+              </p>
             </div>
           </div>
 
