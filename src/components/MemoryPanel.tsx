@@ -6,6 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Slider } from "@/components/ui/slider";
 import {
   Brain,
   Clock,
@@ -16,7 +17,9 @@ import {
   BookOpen,
   Sparkles,
   RefreshCw,
+  Plus,
 } from "lucide-react";
+import { saveLongTermMemory } from "@/lib/memory-service";
 import { toast } from "@/hooks/use-toast";
 
 interface MemoryPanelProps {
