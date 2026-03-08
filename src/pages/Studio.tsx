@@ -67,6 +67,13 @@ const Studio = () => {
   const [viewMode, setViewMode] = useState<'chat' | 'canvas' | 'agents'>('chat');
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [selectedAgentName, setSelectedAgentName] = useState<string>("");
+  const [rightPanel, setRightPanel] = useState<'none' | 'memory' | 'context'>('none');
+  const [contextToggles, setContextToggles] = useState<ContextToggles>({
+    includeHistory: true,
+    includeLTM: true,
+    includeEpisodes: true,
+  });
+  const [totalExchangeCount, setTotalExchangeCount] = useState(0);
 
   // Set up auth listener and load user
   useEffect(() => {
