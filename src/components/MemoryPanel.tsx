@@ -5,7 +5,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Slider } from "@/components/ui/slider";
 import {
   Brain,
   Clock,
@@ -16,7 +18,9 @@ import {
   BookOpen,
   Sparkles,
   RefreshCw,
+  Plus,
 } from "lucide-react";
+import { saveLongTermMemory } from "@/lib/memory-service";
 import { toast } from "@/hooks/use-toast";
 
 interface MemoryPanelProps {
@@ -32,6 +36,11 @@ export function MemoryPanel({ agentId, userId, injectedMemoryKeys }: MemoryPanel
   const [episodicSummaries, setEpisodicSummaries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("conversation");
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newKey, setNewKey] = useState("");
+  const [newValue, setNewValue] = useState("");
+  const [newImportance, setNewImportance] = useState(0.5);
+  const [saving, setSaving] = useState(false);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
@@ -106,6 +115,26 @@ export function MemoryPanel({ agentId, userId, injectedMemoryKeys }: MemoryPanel
     (m) => filterByQuery(m.memory_key) || filterByQuery(m.memory_value)
   );
   const filteredEpisodes = episodicSummaries.filter((e) => filterByQuery(e.summary));
+
+  const handleSaveMemory = async () => {
+    if (!newKey.trim() || !newValue.trim()) {
+      toast({ variant: "destructive", title: "Error", description: "Key and value are required" });
+      return;
+    }
+    setSaving(true);
+    const success = await saveLongTermMemory(agentId, userId, newKey.trim(), newValue.trim(), newImportance);
+    setSaving(false);
+    if (success) {
+      toast({ title: "Saved", description: "Long-term memory saved" });
+      setNewKey("");
+      setNewValue("");
+      setNewImportance(0.5);
+      setShowAddForm(false);
+      loadAll();
+    } else {
+      toast({ variant: "destructive", title: "Error", description: "Failed to save memory" });
+    }
+  };
 
   const importanceColor = (imp: number) => {
     if (imp >= 0.8) return "text-primary";
@@ -189,6 +218,48 @@ export function MemoryPanel({ agentId, userId, injectedMemoryKeys }: MemoryPanel
           </TabsContent>
 
           <TabsContent value="ltm" className="m-0 space-y-2">
+            <div className="flex justify-end">
+              <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => setShowAddForm(!showAddForm)}>
+                <Plus className="w-3 h-3" />
+                {showAddForm ? "Cancel" : "Save Memory"}
+              </Button>
+            </div>
+            {showAddForm && (
+              <Card className="p-3 bg-card/80 border-primary/20 space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Key</Label>
+                  <Input
+                    placeholder="e.g. user_preference_theme"
+                    value={newKey}
+                    onChange={(e) => setNewKey(e.target.value)}
+                    className="h-8 text-xs bg-background"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Value</Label>
+                  <Input
+                    placeholder="e.g. prefers dark mode with blue accents"
+                    value={newValue}
+                    onChange={(e) => setNewValue(e.target.value)}
+                    className="h-8 text-xs bg-background"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Importance: {newImportance.toFixed(2)}</Label>
+                  <Slider
+                    value={[newImportance]}
+                    onValueChange={([v]) => setNewImportance(v)}
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    className="w-full"
+                  />
+                </div>
+                <Button size="sm" className="w-full text-xs" onClick={handleSaveMemory} disabled={saving}>
+                  {saving ? "Saving..." : "Save Long-Term Memory"}
+                </Button>
+              </Card>
+            )}
             {loading ? (
               <p className="text-sm text-muted-foreground text-center py-4">Loading...</p>
             ) : filteredLTM.length === 0 ? (
