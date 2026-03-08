@@ -758,6 +758,27 @@ const Studio = () => {
               </div>
             </div>
           </div>
+
+          {/* Right Panel */}
+          {rightPanel !== 'none' && user && (
+            <div className="w-80 lg:w-96 border-l border-border bg-card/30 backdrop-blur-sm p-4 overflow-hidden flex flex-col">
+              {rightPanel === 'memory' ? (
+                <MemoryPanel
+                  agentId={STUDIO_AGENT_ID}
+                  userId={user.id}
+                />
+              ) : (
+                <ContextComposer
+                  selectedModel={selectedModel}
+                  systemPrompt={systemPromptPreview}
+                  memoryContext={memoryContext}
+                  toggles={contextToggles}
+                  onTogglesChange={setContextToggles}
+                  messageCount={messages.length}
+                />
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
