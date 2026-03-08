@@ -40,7 +40,10 @@ interface Project {
 }
 
 import { AI_MODELS, DEFAULT_MODEL } from "@/lib/models";
-import { saveConversationMessages, loadConversationHistory, buildMemoryContext, generateSessionId } from "@/lib/memory-service";
+import { saveConversationMessages, loadConversationHistory, buildMemoryContext, generateSessionId, loadLongTermMemories, loadEpisodicSummaries } from "@/lib/memory-service";
+import { shouldAutoSummarize, triggerEpisodicSummary, resetSummarizedSessions } from "@/lib/auto-summarize";
+import { MemoryPanel } from "@/components/MemoryPanel";
+import { ContextComposer, type ContextToggles } from "@/components/ContextComposer";
 
 const models = AI_MODELS.map(m => ({ id: m.id, name: m.name, description: `${m.tier} - ${m.description}` }));
 
