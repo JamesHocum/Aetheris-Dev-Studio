@@ -35,6 +35,11 @@ export function MemoryPanel({ agentId, userId, injectedMemoryKeys }: MemoryPanel
   const [episodicSummaries, setEpisodicSummaries] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("conversation");
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [newKey, setNewKey] = useState("");
+  const [newValue, setNewValue] = useState("");
+  const [newImportance, setNewImportance] = useState(0.5);
+  const [saving, setSaving] = useState(false);
 
   const loadAll = useCallback(async () => {
     setLoading(true);
