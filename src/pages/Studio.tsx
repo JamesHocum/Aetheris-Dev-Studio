@@ -5,7 +5,7 @@ import type { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Sparkles, Send, ArrowLeft, Save, FolderOpen, Trash2, Menu, Image as ImageIcon, ChevronDown, User as UserIcon, Layout, Bot, LogOut } from "lucide-react";
+import { Sparkles, Send, ArrowLeft, Save, FolderOpen, Trash2, Menu, Image as ImageIcon, ChevronDown, User as UserIcon, Layout, Bot, LogOut, Brain, Eye, Archive } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Canvas } from "@/components/Canvas";
 import { AgentManager } from "@/components/AgentManager";
@@ -40,7 +40,10 @@ interface Project {
 }
 
 import { AI_MODELS, DEFAULT_MODEL } from "@/lib/models";
-import { saveConversationMessages, loadConversationHistory, buildMemoryContext, generateSessionId } from "@/lib/memory-service";
+import { saveConversationMessages, loadConversationHistory, buildMemoryContext, generateSessionId, loadLongTermMemories, loadEpisodicSummaries } from "@/lib/memory-service";
+import { shouldAutoSummarize, triggerEpisodicSummary, resetSummarizedSessions } from "@/lib/auto-summarize";
+import { MemoryPanel } from "@/components/MemoryPanel";
+import { ContextComposer, type ContextToggles } from "@/components/ContextComposer";
 
 const models = AI_MODELS.map(m => ({ id: m.id, name: m.name, description: `${m.tier} - ${m.description}` }));
 
@@ -64,6 +67,13 @@ const Studio = () => {
   const [viewMode, setViewMode] = useState<'chat' | 'canvas' | 'agents'>('chat');
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
   const [selectedAgentName, setSelectedAgentName] = useState<string>("");
+  const [rightPanel, setRightPanel] = useState<'none' | 'memory' | 'context'>('none');
+  const [contextToggles, setContextToggles] = useState<ContextToggles>({
+    includeHistory: true,
+    includeLTM: true,
+    includeEpisodes: true,
+  });
+  const [totalExchangeCount, setTotalExchangeCount] = useState(0);
 
   // Set up auth listener and load user
   useEffect(() => {
@@ -239,6 +249,17 @@ const Studio = () => {
         sessionId
       ).catch(err => console.error('Failed to persist conversation:', err));
 
+      // Track exchange count and auto-summarize
+      const newCount = totalExchangeCount + 1;
+      setTotalExchangeCount(newCount);
+      if (shouldAutoSummarize(newCount * 2)) {
+        triggerEpisodicSummary({
+          agentId: STUDIO_AGENT_ID,
+          sessionId,
+          messages: finalMessages.map(m => ({ role: m.role === 'aetheris' ? 'assistant' : m.role, content: m.content })),
+        });
+      }
+
       // Auto-save to current project if one is loaded
       if (currentProjectId) {
         handleUpdateProject(currentProjectId, finalMessages);
@@ -411,6 +432,23 @@ const Studio = () => {
     });
   };
 
+  const handleArchiveSession = async () => {
+    if (!user || messages.length < 4) {
+      toast({ title: "Not enough messages", description: "Need at least a few exchanges to archive." });
+      return;
+    }
+    const success = await triggerEpisodicSummary({
+      agentId: STUDIO_AGENT_ID,
+      sessionId,
+      messages: messages.map(m => ({ role: m.role === 'aetheris' ? 'assistant' : m.role, content: m.content })),
+      force: true,
+    });
+    if (success) {
+      // Rebuild memory context to include new summary
+      buildMemoryContext(STUDIO_AGENT_ID, user.id).then(setMemoryContext);
+    }
+  };
+
   const handleAgentSelect = (agentId: string, agentName: string) => {
     setSelectedAgentId(agentId);
     setSelectedAgentName(agentName);
@@ -420,6 +458,9 @@ const Studio = () => {
       description: `Now working with ${agentName}`,
     });
   };
+
+  // Build the system prompt string for the context composer
+  const systemPromptPreview = `You are Aetheris, an advanced AI Development Assistant and the founding spirit of this platform...`;
 
   if (loading) {
     return (
@@ -526,6 +567,28 @@ const Studio = () => {
                 <Bot className="w-4 h-4" />
                 Agents
               </Button>
+
+              {/* Right panel toggles */}
+              <div className="ml-auto flex gap-1">
+                <Button
+                  variant={rightPanel === 'memory' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setRightPanel(rightPanel === 'memory' ? 'none' : 'memory')}
+                  className="gap-1"
+                >
+                  <Brain className="w-4 h-4" />
+                  <span className="hidden sm:inline">Memory</span>
+                </Button>
+                <Button
+                  variant={rightPanel === 'context' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setRightPanel(rightPanel === 'context' ? 'none' : 'context')}
+                  className="gap-1"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span className="hidden sm:inline">Context</span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
@@ -648,6 +711,16 @@ const Studio = () => {
                       </div>
                     </SheetContent>
                   </Sheet>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleArchiveSession}
+                    disabled={messages.length < 4}
+                    className="gap-2"
+                  >
+                    <Archive className="w-4 h-4" />
+                    Archive
+                  </Button>
                 </div>
                 <div className="flex gap-2">
                   <Textarea
@@ -685,6 +758,27 @@ const Studio = () => {
               </div>
             </div>
           </div>
+
+          {/* Right Panel */}
+          {rightPanel !== 'none' && user && (
+            <div className="w-80 lg:w-96 border-l border-border bg-card/30 backdrop-blur-sm p-4 overflow-hidden flex flex-col">
+              {rightPanel === 'memory' ? (
+                <MemoryPanel
+                  agentId={STUDIO_AGENT_ID}
+                  userId={user.id}
+                />
+              ) : (
+                <ContextComposer
+                  selectedModel={selectedModel}
+                  systemPrompt={systemPromptPreview}
+                  memoryContext={memoryContext}
+                  toggles={contextToggles}
+                  onTogglesChange={setContextToggles}
+                  messageCount={messages.length}
+                />
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>
