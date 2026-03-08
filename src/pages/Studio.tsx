@@ -40,9 +40,12 @@ interface Project {
 }
 
 import { AI_MODELS, DEFAULT_MODEL } from "@/lib/models";
-import { saveConversationMessages, loadConversationHistory, buildMemoryContext, saveEpisodicSummary, generateSessionId } from "@/lib/memory-service";
+import { saveConversationMessages, loadConversationHistory, buildMemoryContext, generateSessionId } from "@/lib/memory-service";
+import { AETHERIS_AGENT_ID } from "@/lib/aetheris-agent";
 
 const models = AI_MODELS.map(m => ({ id: m.id, name: m.name, description: `${m.tier} - ${m.description}` }));
+
+const STUDIO_AGENT_ID = AETHERIS_AGENT_ID;
 
 const Studio = () => {
   const navigate = useNavigate();
@@ -52,6 +55,7 @@ const Studio = () => {
   const [command, setCommand] = useState("");
   const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
   const [sessionId] = useState(generateSessionId);
+  const [memoryContext, setMemoryContext] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
