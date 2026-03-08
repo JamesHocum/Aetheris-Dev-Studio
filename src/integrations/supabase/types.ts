@@ -57,15 +57,7 @@ export type Database = {
           time_range_start?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "agent_episodic_summaries_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       agent_files: {
         Row: {
@@ -148,15 +140,7 @@ export type Database = {
           updated_at?: string
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "agent_long_term_memory_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       agent_memory: {
         Row: {
@@ -284,15 +268,7 @@ export type Database = {
           session_id?: string | null
           user_id?: string
         }
-        Relationships: [
-          {
-            foreignKeyName: "conversation_history_agent_id_fkey"
-            columns: ["agent_id"]
-            isOneToOne: false
-            referencedRelation: "agents"
-            referencedColumns: ["id"]
-          },
-        ]
+        Relationships: []
       }
       profiles: {
         Row: {
