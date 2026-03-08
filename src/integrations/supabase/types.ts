@@ -14,6 +14,59 @@ export type Database = {
   }
   public: {
     Tables: {
+      agent_episodic_summaries: {
+        Row: {
+          agent_id: string
+          created_at: string
+          decisions_made: string[] | null
+          emotional_tone: string | null
+          id: string
+          key_topics: string[] | null
+          message_count: number | null
+          session_id: string | null
+          summary: string
+          time_range_end: string | null
+          time_range_start: string | null
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          created_at?: string
+          decisions_made?: string[] | null
+          emotional_tone?: string | null
+          id?: string
+          key_topics?: string[] | null
+          message_count?: number | null
+          session_id?: string | null
+          summary: string
+          time_range_end?: string | null
+          time_range_start?: string | null
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          created_at?: string
+          decisions_made?: string[] | null
+          emotional_tone?: string | null
+          id?: string
+          key_topics?: string[] | null
+          message_count?: number | null
+          session_id?: string | null
+          summary?: string
+          time_range_end?: string | null
+          time_range_start?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_episodic_summaries_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       agent_files: {
         Row: {
           agent_id: string
@@ -51,6 +104,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "agent_files_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      agent_long_term_memory: {
+        Row: {
+          access_count: number | null
+          agent_id: string
+          created_at: string
+          id: string
+          importance: number | null
+          last_accessed_at: string | null
+          memory_key: string
+          memory_value: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          access_count?: number | null
+          agent_id: string
+          created_at?: string
+          id?: string
+          importance?: number | null
+          last_accessed_at?: string | null
+          memory_key: string
+          memory_value: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          access_count?: number | null
+          agent_id?: string
+          created_at?: string
+          id?: string
+          importance?: number | null
+          last_accessed_at?: string | null
+          memory_key?: string
+          memory_value?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "agent_long_term_memory_agent_id_fkey"
             columns: ["agent_id"]
             isOneToOne: false
             referencedRelation: "agents"
@@ -152,6 +252,47 @@ export type Database = {
           voice_id?: string | null
         }
         Relationships: []
+      }
+      conversation_history: {
+        Row: {
+          agent_id: string
+          content: string
+          created_at: string
+          id: string
+          metadata: Json | null
+          role: string
+          session_id: string | null
+          user_id: string
+        }
+        Insert: {
+          agent_id: string
+          content: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          role: string
+          session_id?: string | null
+          user_id: string
+        }
+        Update: {
+          agent_id?: string
+          content?: string
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          role?: string
+          session_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "conversation_history_agent_id_fkey"
+            columns: ["agent_id"]
+            isOneToOne: false
+            referencedRelation: "agents"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       profiles: {
         Row: {
