@@ -79,10 +79,28 @@ const Studio = () => {
             .eq("id", session.user.id)
             .maybeSingle();
           
-          if (profile) {
-            setDisplayName(profile.display_name || "");
+          const name = profile?.display_name || "";
+          setDisplayName(name);
+
+          // Load memory context and recent conversation history
+          const [ctx, history] = await Promise.all([
+            buildMemoryContext(STUDIO_AGENT_ID, session.user.id),
+            loadConversationHistory(STUDIO_AGENT_ID, session.user.id, 30),
+          ]);
+          setMemoryContext(ctx);
+
+          if (history.length > 0) {
+            const restored: Message[] = history.map(h => ({
+              role: h.role === 'user' ? 'user' as const : 'aetheris' as const,
+              content: h.content,
+            }));
             setMessages([
-              { role: 'aetheris', content: `Welcome back, ${profile.display_name}! I am Aetheris, your AI Dev Builder. Ready to continue architecting excellence?` }
+              { role: 'aetheris', content: `Welcome back, ${name}! I remember our previous conversations. Ready to continue?` },
+              ...restored,
+            ]);
+          } else {
+            setMessages([
+              { role: 'aetheris', content: `Welcome, ${name}! I am Aetheris, your AI Dev Builder. Ready to architect excellence?` }
             ]);
           }
         } else {
