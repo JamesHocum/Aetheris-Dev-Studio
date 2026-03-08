@@ -38,6 +38,12 @@ export default function AgentDetail() {
   const [published, setPublished] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState("settings");
+
+  useEffect(() => {
+    supabase.auth.getUser().then(({ data }) => setUserId(data.user?.id ?? null));
+  }, []);
 
   useEffect(() => {
     loadAgent();
