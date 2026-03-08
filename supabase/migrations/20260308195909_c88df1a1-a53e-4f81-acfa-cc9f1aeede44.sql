@@ -1,0 +1,3 @@
+ALTER TABLE public.conversation_history DROP CONSTRAINT IF EXISTS conversation_history_agent_id_fkey;
+ALTER TABLE public.agent_long_term_memory DROP CONSTRAINT IF EXISTS agent_long_term_memory_agent_id_fkey;
+ALTER TABLE public.agent_episodic_summaries DROP CONSTRAINT IF EXISTS agent_episodic_summaries_agent_id_fkey;

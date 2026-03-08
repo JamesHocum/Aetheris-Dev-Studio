@@ -40,9 +40,12 @@ interface Project {
 }
 
 import { AI_MODELS, DEFAULT_MODEL } from "@/lib/models";
-import { saveConversationMessages, loadConversationHistory, buildMemoryContext, saveEpisodicSummary, generateSessionId } from "@/lib/memory-service";
+import { saveConversationMessages, loadConversationHistory, buildMemoryContext, generateSessionId } from "@/lib/memory-service";
 
 const models = AI_MODELS.map(m => ({ id: m.id, name: m.name, description: `${m.tier} - ${m.description}` }));
+
+// Stable ID for the default Aetheris studio chat (not tied to a user-created agent)
+const STUDIO_AGENT_ID = '00000000-0000-0000-0000-000000000000';
 
 const Studio = () => {
   const navigate = useNavigate();
@@ -52,6 +55,7 @@ const Studio = () => {
   const [command, setCommand] = useState("");
   const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
   const [sessionId] = useState(generateSessionId);
+  const [memoryContext, setMemoryContext] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
@@ -75,10 +79,28 @@ const Studio = () => {
             .eq("id", session.user.id)
             .maybeSingle();
           
-          if (profile) {
-            setDisplayName(profile.display_name || "");
+          const name = profile?.display_name || "";
+          setDisplayName(name);
+
+          // Load memory context and recent conversation history
+          const [ctx, history] = await Promise.all([
+            buildMemoryContext(STUDIO_AGENT_ID, session.user.id),
+            loadConversationHistory(STUDIO_AGENT_ID, session.user.id, 30),
+          ]);
+          setMemoryContext(ctx);
+
+          if (history.length > 0) {
+            const restored: Message[] = history.map(h => ({
+              role: h.role === 'user' ? 'user' as const : 'aetheris' as const,
+              content: h.content,
+            }));
             setMessages([
-              { role: 'aetheris', content: `Welcome back, ${profile.display_name}! I am Aetheris, your AI Dev Builder. Ready to continue architecting excellence?` }
+              { role: 'aetheris', content: `Welcome back, ${name}! I remember our previous conversations. Ready to continue?` },
+              ...restored,
+            ]);
+          } else {
+            setMessages([
+              { role: 'aetheris', content: `Welcome, ${name}! I am Aetheris, your AI Dev Builder. Ready to architect excellence?` }
             ]);
           }
         } else {
@@ -148,7 +170,7 @@ const Studio = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token}`,
         },
-        body: JSON.stringify({ messages: newMessages, model: selectedModel }),
+        body: JSON.stringify({ messages: newMessages, model: selectedModel, memoryContext }),
       });
 
       if (!resp.ok || !resp.body) {
@@ -205,6 +227,17 @@ const Studio = () => {
       // Final update with complete message
       const finalMessages = [...newMessages, { role: 'aetheris' as const, content: assistantContent }];
       setMessages(finalMessages);
+
+      // Persist the new user + assistant messages to the database
+      saveConversationMessages(
+        STUDIO_AGENT_ID,
+        user.id,
+        [
+          { role: 'user', content: command },
+          { role: 'assistant', content: assistantContent },
+        ],
+        sessionId
+      ).catch(err => console.error('Failed to persist conversation:', err));
 
       // Auto-save to current project if one is loaded
       if (currentProjectId) {
