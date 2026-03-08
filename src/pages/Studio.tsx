@@ -711,6 +711,16 @@ const Studio = () => {
                       </div>
                     </SheetContent>
                   </Sheet>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleArchiveSession}
+                    disabled={messages.length < 4}
+                    className="gap-2"
+                  >
+                    <Archive className="w-4 h-4" />
+                    Archive
+                  </Button>
                 </div>
                 <div className="flex gap-2">
                   <Textarea
