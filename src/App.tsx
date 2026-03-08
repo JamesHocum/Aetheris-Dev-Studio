@@ -9,6 +9,7 @@ import Install from "./pages/Install";
 import Studio from "./pages/Studio";
 import Agents from "./pages/Agents";
 import AgentDetail from "./pages/AgentDetail";
+import AetherisGenesis from "./pages/AetherisGenesis";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
