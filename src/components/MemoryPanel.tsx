@@ -115,6 +115,26 @@ export function MemoryPanel({ agentId, userId, injectedMemoryKeys }: MemoryPanel
   );
   const filteredEpisodes = episodicSummaries.filter((e) => filterByQuery(e.summary));
 
+  const handleSaveMemory = async () => {
+    if (!newKey.trim() || !newValue.trim()) {
+      toast({ variant: "destructive", title: "Error", description: "Key and value are required" });
+      return;
+    }
+    setSaving(true);
+    const success = await saveLongTermMemory(agentId, userId, newKey.trim(), newValue.trim(), newImportance);
+    setSaving(false);
+    if (success) {
+      toast({ title: "Saved", description: "Long-term memory saved" });
+      setNewKey("");
+      setNewValue("");
+      setNewImportance(0.5);
+      setShowAddForm(false);
+      loadAll();
+    } else {
+      toast({ variant: "destructive", title: "Error", description: "Failed to save memory" });
+    }
+  };
+
   const importanceColor = (imp: number) => {
     if (imp >= 0.8) return "text-primary";
     if (imp >= 0.5) return "text-secondary";
