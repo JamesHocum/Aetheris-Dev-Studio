@@ -18,7 +18,7 @@ export async function saveConversationMessages(
     user_id: userId,
     role: msg.role,
     content: msg.content,
-    metadata: msg.metadata || {},
+    metadata: (msg.metadata || {}) as Record<string, string>,
     session_id: sessionId,
   }));
 
