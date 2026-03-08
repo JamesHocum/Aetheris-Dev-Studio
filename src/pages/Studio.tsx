@@ -170,7 +170,7 @@ const Studio = () => {
           'Content-Type': 'application/json',
           'Authorization': `Bearer ${session?.access_token}`,
         },
-        body: JSON.stringify({ messages: newMessages, model: selectedModel }),
+        body: JSON.stringify({ messages: newMessages, model: selectedModel, memoryContext }),
       });
 
       if (!resp.ok || !resp.body) {
