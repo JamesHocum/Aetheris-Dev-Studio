@@ -5,7 +5,7 @@ import type { User } from "@supabase/supabase-js";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
-import { Sparkles, Send, ArrowLeft, Save, FolderOpen, Trash2, Menu, Image as ImageIcon, ChevronDown, User as UserIcon, Layout, Bot, LogOut } from "lucide-react";
+import { Sparkles, Send, ArrowLeft, Save, FolderOpen, Trash2, Menu, Image as ImageIcon, ChevronDown, User as UserIcon, Layout, Bot, LogOut, Brain, Eye, Archive } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import { Canvas } from "@/components/Canvas";
 import { AgentManager } from "@/components/AgentManager";
