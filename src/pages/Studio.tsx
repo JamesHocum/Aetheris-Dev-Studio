@@ -567,6 +567,28 @@ const Studio = () => {
                 <Bot className="w-4 h-4" />
                 Agents
               </Button>
+
+              {/* Right panel toggles */}
+              <div className="ml-auto flex gap-1">
+                <Button
+                  variant={rightPanel === 'memory' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setRightPanel(rightPanel === 'memory' ? 'none' : 'memory')}
+                  className="gap-1"
+                >
+                  <Brain className="w-4 h-4" />
+                  <span className="hidden sm:inline">Memory</span>
+                </Button>
+                <Button
+                  variant={rightPanel === 'context' ? 'default' : 'ghost'}
+                  size="sm"
+                  onClick={() => setRightPanel(rightPanel === 'context' ? 'none' : 'context')}
+                  className="gap-1"
+                >
+                  <Eye className="w-4 h-4" />
+                  <span className="hidden sm:inline">Context</span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
