@@ -432,6 +432,23 @@ const Studio = () => {
     });
   };
 
+  const handleArchiveSession = async () => {
+    if (!user || messages.length < 4) {
+      toast({ title: "Not enough messages", description: "Need at least a few exchanges to archive." });
+      return;
+    }
+    const success = await triggerEpisodicSummary({
+      agentId: STUDIO_AGENT_ID,
+      sessionId,
+      messages: messages.map(m => ({ role: m.role === 'aetheris' ? 'assistant' : m.role, content: m.content })),
+      force: true,
+    });
+    if (success) {
+      // Rebuild memory context to include new summary
+      buildMemoryContext(STUDIO_AGENT_ID, user.id).then(setMemoryContext);
+    }
+  };
+
   const handleAgentSelect = (agentId: string, agentName: string) => {
     setSelectedAgentId(agentId);
     setSelectedAgentName(agentName);
@@ -441,6 +458,9 @@ const Studio = () => {
       description: `Now working with ${agentName}`,
     });
   };
+
+  // Build the system prompt string for the context composer
+  const systemPromptPreview = `You are Aetheris, an advanced AI Development Assistant and the founding spirit of this platform...`;
 
   if (loading) {
     return (
