@@ -217,6 +217,48 @@ export function MemoryPanel({ agentId, userId, injectedMemoryKeys }: MemoryPanel
           </TabsContent>
 
           <TabsContent value="ltm" className="m-0 space-y-2">
+            <div className="flex justify-end">
+              <Button variant="outline" size="sm" className="gap-1 text-xs" onClick={() => setShowAddForm(!showAddForm)}>
+                <Plus className="w-3 h-3" />
+                {showAddForm ? "Cancel" : "Save Memory"}
+              </Button>
+            </div>
+            {showAddForm && (
+              <Card className="p-3 bg-card/80 border-primary/20 space-y-3">
+                <div className="space-y-1">
+                  <Label className="text-xs">Key</Label>
+                  <Input
+                    placeholder="e.g. user_preference_theme"
+                    value={newKey}
+                    onChange={(e) => setNewKey(e.target.value)}
+                    className="h-8 text-xs bg-background"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Value</Label>
+                  <Input
+                    placeholder="e.g. prefers dark mode with blue accents"
+                    value={newValue}
+                    onChange={(e) => setNewValue(e.target.value)}
+                    className="h-8 text-xs bg-background"
+                  />
+                </div>
+                <div className="space-y-1">
+                  <Label className="text-xs">Importance: {newImportance.toFixed(2)}</Label>
+                  <Slider
+                    value={[newImportance]}
+                    onValueChange={([v]) => setNewImportance(v)}
+                    min={0}
+                    max={1}
+                    step={0.05}
+                    className="w-full"
+                  />
+                </div>
+                <Button size="sm" className="w-full text-xs" onClick={handleSaveMemory} disabled={saving}>
+                  {saving ? "Saving..." : "Save Long-Term Memory"}
+                </Button>
+              </Card>
+            )}
             {loading ? (
               <p className="text-sm text-muted-foreground text-center py-4">Loading...</p>
             ) : filteredLTM.length === 0 ? (
