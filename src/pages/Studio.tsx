@@ -50,7 +50,8 @@ const Studio = () => {
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(true);
   const [command, setCommand] = useState("");
-  const [selectedModel, setSelectedModel] = useState(models[0].id);
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
+  const [sessionId] = useState(generateSessionId);
   const [messages, setMessages] = useState<Message[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);
