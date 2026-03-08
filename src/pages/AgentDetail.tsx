@@ -13,9 +13,11 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Brain, Settings } from "lucide-react";
 import type { AgentVisibility } from "@/types/agent";
+import { MemoryPanel } from "@/components/MemoryPanel";
 
 import { AI_MODELS } from "@/lib/models";
 
