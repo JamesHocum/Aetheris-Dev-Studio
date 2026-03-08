@@ -249,6 +249,17 @@ const Studio = () => {
         sessionId
       ).catch(err => console.error('Failed to persist conversation:', err));
 
+      // Track exchange count and auto-summarize
+      const newCount = totalExchangeCount + 1;
+      setTotalExchangeCount(newCount);
+      if (shouldAutoSummarize(newCount * 2)) {
+        triggerEpisodicSummary({
+          agentId: STUDIO_AGENT_ID,
+          sessionId,
+          messages: finalMessages.map(m => ({ role: m.role === 'aetheris' ? 'assistant' : m.role, content: m.content })),
+        });
+      }
+
       // Auto-save to current project if one is loaded
       if (currentProjectId) {
         handleUpdateProject(currentProjectId, finalMessages);
