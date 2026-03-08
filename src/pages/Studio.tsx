@@ -41,11 +41,11 @@ interface Project {
 
 import { AI_MODELS, DEFAULT_MODEL } from "@/lib/models";
 import { saveConversationMessages, loadConversationHistory, buildMemoryContext, generateSessionId } from "@/lib/memory-service";
-import { AETHERIS_AGENT_ID } from "@/lib/aetheris-agent";
 
 const models = AI_MODELS.map(m => ({ id: m.id, name: m.name, description: `${m.tier} - ${m.description}` }));
 
-const STUDIO_AGENT_ID = AETHERIS_AGENT_ID;
+// Stable ID for the default Aetheris studio chat (not tied to a user-created agent)
+const STUDIO_AGENT_ID = '00000000-0000-0000-0000-000000000000';
 
 const Studio = () => {
   const navigate = useNavigate();
