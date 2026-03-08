@@ -39,14 +39,10 @@ interface Project {
   updatedAt: number;
 }
 
-const models = [
-  { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash', description: 'Balanced - Fast & efficient' },
-  { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro', description: 'Most powerful - Best reasoning' },
-  { id: 'google/gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite', description: 'Fastest - Simple tasks' },
-  { id: 'openai/gpt-5', name: 'GPT-5', description: 'Premium - Excellent reasoning' },
-  { id: 'openai/gpt-5-mini', name: 'GPT-5 Mini', description: 'Fast - Good performance' },
-  { id: 'openai/gpt-5-nano', name: 'GPT-5 Nano', description: 'Efficient - Cost saving' },
-];
+import { AI_MODELS, DEFAULT_MODEL } from "@/lib/models";
+import { saveConversationMessages, loadConversationHistory, buildMemoryContext, saveEpisodicSummary, generateSessionId } from "@/lib/memory-service";
+
+const models = AI_MODELS.map(m => ({ id: m.id, name: m.name, description: `${m.tier} - ${m.description}` }));
 
 const Studio = () => {
   const navigate = useNavigate();
@@ -54,7 +50,8 @@ const Studio = () => {
   const [displayName, setDisplayName] = useState("");
   const [loading, setLoading] = useState(true);
   const [command, setCommand] = useState("");
-  const [selectedModel, setSelectedModel] = useState(models[0].id);
+  const [selectedModel, setSelectedModel] = useState(DEFAULT_MODEL);
+  const [sessionId] = useState(generateSessionId);
   const [messages, setMessages] = useState<Message[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [currentProjectId, setCurrentProjectId] = useState<string | null>(null);

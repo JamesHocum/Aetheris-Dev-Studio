@@ -27,14 +27,9 @@ import { z } from "zod";
 import { slugify } from "@/lib/slugify";
 import type { AgentVisibility } from "@/types/agent";
 
-const models = [
-  { id: 'google/gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
-  { id: 'google/gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
-  { id: 'google/gemini-2.5-flash-lite', name: 'Gemini 2.5 Flash Lite' },
-  { id: 'openai/gpt-5', name: 'GPT-5' },
-  { id: 'openai/gpt-5-mini', name: 'GPT-5 Mini' },
-  { id: 'openai/gpt-5-nano', name: 'GPT-5 Nano' },
-];
+import { AI_MODELS } from "@/lib/models";
+
+const models = AI_MODELS.map(m => ({ id: m.id, name: m.name }));
 
 // Validation schema
 const agentSchema = z.object({

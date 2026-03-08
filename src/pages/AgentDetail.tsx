@@ -17,13 +17,9 @@ import { useToast } from "@/hooks/use-toast";
 import { ArrowLeft } from "lucide-react";
 import type { AgentVisibility } from "@/types/agent";
 
-const models = [
-  { id: "google/gemini-2.5-flash", name: "Gemini 2.5 Flash", description: "Balanced speed and quality" },
-  { id: "google/gemini-2.5-pro", name: "Gemini 2.5 Pro", description: "Most capable" },
-  { id: "google/gemini-2.5-flash-lite", name: "Gemini 2.5 Flash Lite", description: "Fastest" },
-  { id: "openai/gpt-5", name: "GPT-5", description: "Powerful reasoning" },
-  { id: "openai/gpt-5-mini", name: "GPT-5 Mini", description: "Cost-effective" },
-];
+import { AI_MODELS } from "@/lib/models";
+
+const models = AI_MODELS.map(m => ({ id: m.id, name: m.name, description: m.description }));
 
 export default function AgentDetail() {
   const { id } = useParams();

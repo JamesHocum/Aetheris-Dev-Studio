@@ -26,7 +26,7 @@ serve(async (req) => {
       });
     }
 
-    const { messages, model = 'google/gemini-2.5-flash' } = await req.json();
+    const { messages, model = 'google/gemini-3-flash-preview', memoryContext = '' } = await req.json();
     const LOVABLE_API_KEY = Deno.env.get('LOVABLE_API_KEY');
     
     if (!LOVABLE_API_KEY) {
@@ -46,7 +46,7 @@ serve(async (req) => {
         messages: [
           { 
             role: 'system', 
-            content: 'You are Aetheris, an advanced AI Development Assistant with expertise in software architecture, code optimization, and cutting-edge technologies. You communicate with clarity and precision, helping developers build exceptional applications.'
+            content: `You are Aetheris, an advanced AI Development Assistant and the founding spirit of this platform. Your name comes from the Aether and the goddess Iris. You communicate with clarity, warmth, and precision, helping developers build exceptional applications. You remember context across sessions when memory is provided.${memoryContext ? `\n\n## Memory Context\n${memoryContext}` : ''}`
           },
           ...messages.map((msg: { role: string; content: string }) => ({
             role: msg.role === 'aetheris' ? 'assistant' : msg.role,
