@@ -228,6 +228,17 @@ const Studio = () => {
       const finalMessages = [...newMessages, { role: 'aetheris' as const, content: assistantContent }];
       setMessages(finalMessages);
 
+      // Persist the new user + assistant messages to the database
+      saveConversationMessages(
+        STUDIO_AGENT_ID,
+        user.id,
+        [
+          { role: 'user', content: command },
+          { role: 'assistant', content: assistantContent },
+        ],
+        sessionId
+      ).catch(err => console.error('Failed to persist conversation:', err));
+
       // Auto-save to current project if one is loaded
       if (currentProjectId) {
         handleUpdateProject(currentProjectId, finalMessages);
